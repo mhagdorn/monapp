@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import psutil
+import subprocess
+import argparse
+import time
+import sys,os
+
+def runprog(cmd):
+    return subprocess.Popen(cmd,shell=True).pid
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("cmd",help="the program to monitor, use quotes if the program requires any options")
+    parser.add_argument("-o","--output", default="monapp",help="base output name (default: monapp), the program appends the PID of the process it is monitoring")
+    args = parser.parse_args()
+
+    CPU_TIMES = ['user','system']
+    EXT_MEMORY_INFO = ['rss','vms','shared','text','lib','data','dirty']
+    IO_COUNTERS = ['read_count','write_count','read_bytes','write_bytes']
+
+    # start program
+    p = psutil.Popen(args.cmd,shell=True)
+
+    try:
+        outf = open(args.output+'.%d'%p.pid,'w')
+    except:
+        p.wait()
+        sys.exit(0)
+
+    outf.write("#time num_threads num_fds")
+    for f in CPU_TIMES + EXT_MEMORY_INFO + IO_COUNTERS:
+        outf.write(" "+f)
+    outf.write("\n")
+
+    while p.poll()==None:
+        t = time.time()
+        num_fds = p.get_num_fds()
+        num_threads = p.get_num_threads()
+        cpu_times = p.get_cpu_times()
+        ext_memory_info = p.get_ext_memory_info()
+        io_counters = p.get_io_counters()
+        outf.write("%f %d %d"%(t,num_threads,num_fds))
+        for f in CPU_TIMES:
+            outf.write(" %f"%getattr(cpu_times,f))
+        for f in EXT_MEMORY_INFO:
+            outf.write(" %d"%getattr(ext_memory_info,f))
+        for f in IO_COUNTERS:
+            outf.write(" %d"%getattr(io_counters,f))
+        outf.write("\n")
+        outf.flush()
+        time.sleep(1)
+        
+    outf.close()
