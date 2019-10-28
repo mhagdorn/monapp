@@ -4,7 +4,7 @@ setup(
     name = "monapp",
     packages = find_packages(),
     install_requires = [
-        'psutil',
+        'psutil > 5.0.0',
         ],
     entry_points={
         'console_scripts': [
